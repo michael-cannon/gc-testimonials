@@ -41,8 +41,10 @@ add_action('plugins_loaded', 'start_plugin_textdomain');
 **********************************************************/
 
 function gct_testimominal_custom_scripts() { 
-	
 	global $post; 
+	
+	if ( is_admin() || empty( $post ) )
+		return;
 	
 	if ( strstr($post->post_content, '[single-testimonial') || 
 		 strstr($post->post_content, '[random-testimonial') || 
@@ -182,7 +184,7 @@ function gct_testimonial_register() {
 
 function gct_custom_columns($column) {
 	global $post;
-	$custom = get_post_custom();
+	$custom = gct_get_post_custom();
 	if ("post_id" == $column) echo $post->ID;
 	elseif ("description" == $column) echo substr($post->post_content, 0, 100).'...';
 	elseif ("client_name" == $column)  echo $custom["client_name"][0];
@@ -264,7 +266,7 @@ function gct_admin_init() {
 
 function gct_meta_options() {  
        global $post;  
-       $custom = get_post_custom($post->ID);  
+       $custom = gct_get_post_custom($post->ID);  
        $client_name = $custom["client_name"][0]; 
        $client_photo = $custom["client_photo"][0];
        $email = $custom["email"][0];
@@ -397,7 +399,7 @@ function gct_single_testimonial_shortcode($atts) {
 				
 	// Add custom fields
 	$selected_extended_posts = array();
-	$custom = get_post_custom($post->ID);
+	$custom = gct_get_post_custom($post->ID);
 		foreach(array('client_name', 'client_photo', 'email', 'company_website', 'company_name') as $field) {
 			if(isset($custom[$field])){
 				$post->$field = $custom[$field][0];
@@ -450,7 +452,7 @@ function gct_random_testimonial_shortcode($atts) {
 	foreach($posts_array as $post) {	
 		// Add custom fields
 		$selected_extended_posts = array();
-		$custom = get_post_custom($post->ID);
+		$custom = gct_get_post_custom($post->ID);
 			foreach(array('client_name', 'client_photo', 'email', 'company_website', 'company_name') as $field) {
 				if(isset($custom[$field])){
 					$post->$field = $custom[$field][0];
@@ -508,7 +510,7 @@ function gct_full_testimonials_shortcode($atts) {
 					
 		// Add custom fields
 		$selected_extended_posts = array();
-		$custom = get_post_custom($post->ID);
+		$custom = gct_get_post_custom($post->ID);
 			foreach(array('client_name', 'client_photo', 'email', 'company_website', 'company_name') as $field) {
 				if(isset($custom[$field])){
 					$post->$field = $custom[$field][0];
@@ -771,7 +773,7 @@ class GCT_Testimonial_Menu_Widget extends WP_Widget {
 					
 			// Add custom fields
 			$selected_extended_posts = array();
-			$custom = get_post_custom($post->ID);
+			$custom = gct_get_post_custom($post->ID);
 				foreach(array('client_name', 'client_photo', 'company_website', 'company_name') as $field) {
 					if(isset($custom[$field])){
 						$post->$field = $custom[$field][0];
@@ -942,8 +944,8 @@ class GCT_Testimonial_Menu_Widget extends WP_Widget {
  /* Setup Default Options */
  
 if ( is_admin() ) { 
-	//register_uninstall_hook(KCVT_URL.'/testimonials.php', 'gct_testimonials_de_register_settings');
-	register_activation_hook(KCVT_URL.'/testimonials.php', 'gct_testimonials_register_settings');
+	//register_uninstall_hook( dirname( __FILE__ ).'/testimonials.php', 'gct_testimonials_de_register_settings' );
+	register_activation_hook( dirname( __FILE__ ) .'/testimonials.php', 'gct_testimonials_register_settings' );
 }
 
 function gct_testimonials_register_settings() { 
@@ -1021,7 +1023,6 @@ if(isset($_POST[ $hidden_field_name ]) && $_POST[ $hidden_field_name ] == 'Y' ) 
 		 		<form name="gc-testimonials" method="post" action="<?php echo str_replace( '%7E', '~', $_SERVER['REQUEST_URI']); ?>">
 						
 				<input type="hidden" name="<?php echo $hidden_field_name; ?>" value="Y">
-				<input type="hidden" name="<?php echo $opt_name['testimonial_layout']; ?>" value="default">
 											
 				<div id="sets">
 				
@@ -1089,3 +1090,21 @@ if(isset($_POST[ $hidden_field_name ]) && $_POST[ $hidden_field_name ] == 'Y' ) 
 }
 
 	
+function gct_get_post_custom() {
+	global $post;
+
+	$custom = get_post_custom();
+	$fields = array(
+		'client_name',
+		'client_photo',
+		'company_name',
+		'company_website',
+		'email',
+	);
+	foreach ( $fields as $field ) {
+		if ( ! isset( $custom[ $field ][ 0 ] ) )
+			$custom[ $field ][ 0 ] = '';
+	}
+
+	return $custom;
+}
